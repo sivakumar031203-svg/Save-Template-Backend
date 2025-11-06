@@ -40,7 +40,17 @@ public class TransferHmService {
                     .replaceAll("<br>", "<br/>")
                     .replaceAll("<img([^>]+)(?<!/)>", "<img$1/>");
 
-            // Static data placeholders
+            // Extract the <div class="title-data"> ... </div>
+            String titleData = "";
+            java.util.regex.Matcher matcher = java.util.regex.Pattern
+                    .compile("<div[^>]*class=['\"]title-data['\"][^>]*>(.*?)</div>", java.util.regex.Pattern.DOTALL)
+                    .matcher(html);
+            if (matcher.find()) {
+                titleData = matcher.group(1).trim(); // extract inner content
+                html = matcher.replaceFirst("");     // remove that div from main html
+            }
+
+            // Replace placeholders (optional)
             Map<String, String> data = new HashMap<>();
             data.put("district_name", "Guntur District");
             data.put("officer_name", "Sri Venkata Rao, DEO");
@@ -59,23 +69,76 @@ public class TransferHmService {
                 html = html.replace("{{" + entry.getKey() + "}}", entry.getValue());
             }
 
+            String baseUri = Paths.get("src/main/resources/static/").toUri().toString();
+
             String fullHtml = """
-            <!DOCTYPE html>
-            <html>
-            <head>
-              <meta charset='UTF-8'/>
-              <style>
-                body { font-family: "Times New Roman", serif; line-height: 1.6; font-size: 14px; }
-                .ql-align-center { text-align: center; }
-                .ql-align-right { text-align: right; }
-                .ql-align-justify { text-align: justify; }
-                ul { margin-left: 20px; }
-              </style>
-            </head>
-            <body>""" + html + "</body></html>";
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset='UTF-8'/>
+          <style>
+            body { 
+              font-family: "Times New Roman", serif; 
+              line-height: 1.6; 
+              font-size: 14px; 
+              margin: 40px; 
+            }
+            .title {
+              text-align: center;
+              font-size: 22px;
+              font-weight: bold;
+              margin-bottom: 15px;
+              text-transform: uppercase;
+            }
+            table.header-table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-bottom: 20px;
+            }
+            table.header-table td {
+              vertical-align: top;
+            }
+            .logo-cell {
+              width: 120px;
+            }
+            .logo-cell img {
+              width: 100px;
+              height: 100px;
+            }
+            .header-text {
+              font-size: 14px;
+              line-height: 1.5;
+              padding-left: 10px;
+            }
+            .ql-align-center { text-align: center; }
+            .ql-align-right { text-align: right; }
+            .ql-align-justify { text-align: justify; }
+            ul { margin-left: 20px; }
+          </style>
+        </head>
+        <body>
+          <div class="title">TRANSFER ORDER</div>
+
+          <table class="header-table">
+            <tr>
+              <td class="logo-cell">
+                <img src="images/logo.png" alt="Logo"/>
+              </td>
+              <td class="header-text">
+        """ + titleData + """
+              </td>
+            </tr>
+          </table>
+
+        """ + html + """
+        </body>
+        </html>
+        """;
+
+
 
             PdfRendererBuilder builder = new PdfRendererBuilder();
-            builder.withHtmlContent(fullHtml, null);
+            builder.withHtmlContent(fullHtml, baseUri);
             builder.toStream(os);
             builder.run();
             return os.toByteArray();
@@ -83,5 +146,8 @@ public class TransferHmService {
             throw new IOException("PDF generation failed: " + e.getMessage());
         }
     }
+
+
+
 }
 
